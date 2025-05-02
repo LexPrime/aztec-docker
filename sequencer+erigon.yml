@@ -1,0 +1,68 @@
+x-logging:
+  &logging
+  logging:
+    options:
+      max-size: 50m
+      max-file: "3"
+
+services:
+  sequencer:
+    image: aztecprotocol/aztec:$SEQUENCER_VERSION
+    container_name: seq
+    restart: always
+    environment:
+      ETHEREUM_HOSTS: $ETHEREUM_HOSTS
+      L1_CONSENSUS_HOST_URLS: $L1_CONSENSUS_HOST_URLS
+      DATA_DIRECTORY: /data
+      VALIDATOR_PRIVATE_KEY: $VALIDATOR_PRIVATE_KEY
+      COINBASE: $COINBASE
+      P2P_IP: $P2P_IP
+      LOG_LEVEL: debug
+    entrypoint: >
+      sh -c 'node --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js start --network alpha-testnet start --node --archiver --sequencer'
+    ports:
+      - 40400:40400/tcp
+      - 40400:40400/udp
+      - 8080:8080
+    volumes:
+      - ./data:/data
+    <<: *logging
+
+  erigon-sepolia:
+    image: erigontech/erigon:$ERIGON_VERSION
+    restart: unless-stopped
+    container_name: erigon-sepolia
+    stop_grace_period: 3m
+    expose:
+      - 8545
+      - 8551
+      - 6060
+      - 9090
+      - 5555
+    ports:
+      - 30403:30303
+      - 30404:30304
+      - 42079:42069
+      - 4010:4000
+      - 4011:4001
+    volumes:
+      - ./erigon-data:/home/erigon/.local/share/erigon/
+      - ./erigon-data/jwt.hex:/home/erigon/.local/share/erigon/jwt.hex:ro
+    command: |
+      --chain=sepolia
+      --prune.mode=full
+      --authrpc.jwtsecret=/home/erigon/.local/share/erigon/jwt.hex
+      --authrpc.addr=0.0.0.0
+      --beacon.api=beacon
+      --beacon.api.addr=0.0.0.0
+      --authrpc.vhosts=*
+      --http.addr=0.0.0.0
+      --http.vhosts=*
+      --http.corsdomain=*
+      --http.api=eth,debug,web3,erigon,trace,net,txpool
+      --private.api.addr=0.0.0.0:9090
+      --metrics
+      --metrics.addr=0.0.0.0
+      --ws
+      --torrent.download.rate=1024mb
+    <<: *logging

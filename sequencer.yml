@@ -1,0 +1,29 @@
+x-logging:
+  &logging
+  logging:
+    options:
+      max-size: 50m
+      max-file: "3"
+
+services:
+  sequencer:
+    image: aztecprotocol/aztec:$SEQUENCER_VERSION
+    container_name: seq
+    restart: always
+    environment:
+      ETHEREUM_HOSTS: $ETHEREUM_HOSTS
+      L1_CONSENSUS_HOST_URLS: $L1_CONSENSUS_HOST_URLS
+      DATA_DIRECTORY: /data
+      VALIDATOR_PRIVATE_KEY: $VALIDATOR_PRIVATE_KEY
+      COINBASE: $COINBASE
+      P2P_IP: $P2P_IP
+      LOG_LEVEL: debug
+    entrypoint: >
+      sh -c 'node --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js start --network alpha-testnet start --node --archiver --sequencer'
+    ports:
+      - 40400:40400/tcp
+      - 40400:40400/udp
+      - 8080:8080
+    volumes:
+      - ./data:/data
+    <<: *logging
