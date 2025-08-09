@@ -17,7 +17,7 @@ services:
       VALIDATOR_PRIVATE_KEY: $VALIDATOR_PRIVATE_KEY
       COINBASE: $COINBASE
       P2P_IP: $P2P_IP
-      LOG_LEVEL: debug
+      LOG_LEVEL: info
     entrypoint: >
       sh -c 'node --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js start --network alpha-testnet start --node --archiver --sequencer'
     ports:
@@ -38,9 +38,7 @@ services:
       - 8551
       - 6060
       - 9090
-      - 5555
     ports:
-      - 5556:5555
       - 8555:8545
       - 30403:30303
       - 30404:30304
@@ -52,11 +50,10 @@ services:
       - ./erigon-data/jwt.hex:/home/erigon/.local/share/erigon/jwt.hex:ro
     command: |
       --chain=sepolia
+      --externalcl
       --prune.mode=full
       --authrpc.jwtsecret=/home/erigon/.local/share/erigon/jwt.hex
       --authrpc.addr=0.0.0.0
-      --beacon.api=beacon
-      --beacon.api.addr=0.0.0.0
       --authrpc.vhosts=*
       --http.addr=0.0.0.0
       --http.vhosts=*
@@ -66,7 +63,29 @@ services:
       --metrics
       --metrics.addr=0.0.0.0
       --ws
-      --db.size.limit=8TB
-      --db.pagesize=16kb
       --torrent.download.rate=1024mb
+    <<: *logging
+
+  lighthouse:
+    container_name: lighthouse
+    user: root
+    image: sigp/lighthouse:latest
+    command:
+     lighthouse bn
+     --network sepolia
+     --checkpoint-sync-url https://beaconstate-sepolia.chainsafe.io/
+     --execution-endpoint http://erigon-sepolia:8551
+     --execution-jwt /root/.lighthouse/jwt.hex
+     --http
+     --http-address 0.0.0.0
+     --datadir /root/.lighthouse/beacon-node
+    volumes:
+      - ./lighthouse:/root/.lighthouse
+      - ./erigon-data/jwt.hex:/root/.lighthouse/jwt.hex
+    expose:
+      - 5052
+    ports:
+      - "9001:9000/tcp"
+      - "9001:9000/udp"
+    restart: unless-stopped
     <<: *logging
